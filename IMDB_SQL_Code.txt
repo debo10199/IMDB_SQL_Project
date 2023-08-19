@@ -1,0 +1,314 @@
+Segment 1: Database - Tables, Columns, Relationships              Doubt 5.5,5.6,6.3
+Q 1.1 What are the different tables in the database and how are they connected to each other in the database?
+Q 1.2 Find the total number of rows in each table of the schema.
+
+select count(*) from director_mapping;
+select count(*) from genre;
+select count(*) from movie;
+select count(*) from names;
+select count(*) from ratings;
+select count(*) from role_mapping;
+
+Q 1.3 Identify which columns in the movie table have null values.
+
+SELECT 
+	(select count(*) from movie where id is NULL) as id_null,
+	(select count(*) from movie where title is NULL) as title_null,
+	(select count(*) from movie where year is NULL) as year_null,
+	(select count(*) from movie where date_published is NULL) as date_published_null,
+	(select count(*) from movie where duration is NULL) as duration_null,
+	(select count(*) from movie where country is NULL) as country_null,
+	(select count(*) from movie where worlwide_gross_income is NULL) as worldwide_gross_income_null,
+	(select count(*) from movie where languages is NULL) as laguages_null,
+	(select count(*) from movie where production_company is NULL) as production_company_null
+;
+
+Segment 2: Movie Release Trends
+Q 2.1 Determine the total number of movies released each year and analyse the month-wise trend.
+
+select year, count(id) movie_count from movie
+group by year
+order by 1;
+-- The query reveals that 2017 boasts the highest movie count (3052), followed by 2018 and 2019.
+
+select date_format(date_published,'%M') monthwise, count(id) movie_count from movie
+group by 1
+order by 2 desc; 
+-- this query reveles that in the month of March most of the movies are publised (824) and followed by september, january and others.
+
+Q 2.2 Calculate the number of movies produced in the USA or India in the year 2019.
+
+select count(*) movie_count from movie
+where year = '2019' and (lower(country) like '%usa%' or lower(country) like '%india%');
+-- A total of 1059 movies were produced in the year 2019, jointly originating from both the USA and India.
+
+Segment 3: Production Statistics and Genre Analysis
+Q 3.1 Retrieve the unique list of genres present in the dataset.
+
+select distinct genre as No_of_genre from genre;
+-- All the unique list of genre retrive from this dataset.
+
+Q 3.2 Identify the genre with the highest number of movies produced overall.
+
+select genre, count(movie_id) Movie_count from genre
+group by genre
+order by 2 desc
+limit 1;
+-- Among various genres, Drama stands out as the genre with the highest movie production count(4285).
+
+Q 3.3 Determine the count of movies that belong to only one genre.
+
+select count(*) Movies_count from (select movie_id, count(genre) from genre
+group by movie_id
+having count(genre) = 1) sub;
+-- A sum of 3289 movies were exclusively categorized under a single genre.
+
+Q 3.4 Calculate the average duration of movies in each genre.
+
+select genre, round(avg(duration),2) Average_duration from genre g
+join movie m on m.id = g.movie_id
+group by genre
+order by 2 desc;
+-- The Action genre boasts the highest average duration of 112 minutes, surpassing other genres, 
+----with Romance and Crime genres following closely..
+
+Q 3.5 Find the rank of the 'thriller' genre among all genres in terms of the number of movies produced.
+
+select * from (select genre, Dense_rank() over(order by count(movie_id) desc) ranking from genre
+group by 1) subquery where genre = 'thriller';
+--- The Thriller genre secures the third position among all genres in terms of the total number of produced movies.
+
+Segment 4: Ratings Analysis and Crew Members
+Q 4.1 Retrieve the minimum and maximum values in each column of the ratings table (except movie_id).
+
+select max(avg_rating) as maximum_avg_rating, min(avg_rating) as minimum_avg_rating, 
+       max(total_votes) as maximum_total_votes, min(total_votes) as minimum_total_votes,
+       max(median_rating) as maximum_median_rating, min(median_rating) as minimum_median_rating
+from ratings;
+-- The query extracts movies with an average and median rating range of 1 to 10, along with a total vote count spanning from 100 to 725,138.
+Q 4.2 Identify the top 10 movies based on average rating.
+
+select title as Movie_Name, avg_rating from movie m
+join ratings r on r.movie_id = m.id
+order by 2 desc 
+limit 10;
+-- This query fetches the top 10 movie names based on average rating,
+-- with the first three being "Kirket," "Love in Kilnerry," and "Gini Helida Kathe."
+
+Q 4.3 Summarise the ratings table based on movie counts by median ratings.
+
+select median_rating, count(movie_id) as movies_count from ratings
+group by 1
+order by 2 desc;
+--- The results highlight a prevalent median rating of 7 among the movies, trailed by ratings of 6 and 8, and subsequently, other values.
+
+Q 4.4 Identify the production house that has produced the most number of hit movies (average rating > 8).
+
+select production_company, count(id) number_of_movies from movie
+where id in (select movie_id from ratings where avg_rating > 8)
+and production_company is not null
+group by 1
+order by 2 desc
+limit 1;
+-- The production house 'Dream Warrior Pictures' has produced the highest count of well-rated movies with an average rating exceeding 8.
+
+Q 4.5 Determine the number of movies released in each genre during March 2017 in the USA with more than 1,000 votes.
+
+select genre, count(g.movie_id) movie_count from genre g
+join movie m on m.id = g.movie_id
+join ratings r on g.movie_id = r.movie_id
+where total_votes > 1000 and lower(country) like'%usa%' and year = 2017 and month(date_published) = 3
+group by 1
+order by 2 desc;
+-- In March 2017, within the USA, the 'Drama' genre led with the highest movie count, surpassing 1,000 votes, followed by 'Comedy' and 'Action' genres in that order.
+
+Q 4.6 Retrieve movies of each genre starting with the word 'The' and having an average rating > 8.
+
+select genre, title from genre g
+join movie m on g.movie_id = m.id 
+join ratings r on r.movie_id = g.movie_id 
+where title like 'the%' and avg_rating > 8
+order by 1;
+
+Segment 5: Crew Analysis
+Q 5.1 Identify the columns in the names table that have null values.
+
+select 
+(select count(*) from names where name is null) as name_is_null,
+(select count(*) from names where height is null)as height_is_null,
+(select count(*) from names where date_of_birth is null)as date_of_birth_is_null, 
+(select count(*) from names where known_for_movies is null) as Known_for_movies_is_null,
+;
+
+Q 5.2 Determine the top three directors in the top three genres with movies having an average rating > 8.
+
+select name as Director_name, count(g.movie_id) from names n
+join director_mapping dm on n.id = dm.name_id
+join genre g on dm.movie_id = g.movie_id
+join ratings r on g.movie_id = r.movie_id
+where genre in (
+select genre from (
+select genre, count(g.movie_id) from genre g
+join ratings r on g.movie_id = r.movie_id
+where avg_rating >8 
+group by 1
+order by 2 desc
+limit 3) sub)
+and avg_rating > 8
+group by 1
+order by 2 desc
+limit 3;
+-- James Mangold, Joe Russo, and Anthony Russo emerge as the leading directors in the top three genres, each producing movies with an average rating surpassing 8.
+
+ Q 5.3 Find the top two actors whose movies have a median rating >= 8.
+
+select name, count(rm.movie_id) total_movies from names n
+join role_mapping rm on rm.name_id = n.id
+join ratings r on r.movie_id = rm.movie_id
+where median_rating > 8 and category = 'actor' group by 1 order by 2 desc limit 2;
+-- Mammootty and Mohanlal secure the top positions as actors with the highest movie counts, both achieving a median rating exceeding 8.
+ 
+Q 5.4 Identify the top three production houses based on the number of votes received by their movies.
+
+select production_company, sum(total_votes) as total_vote from movie m
+join ratings r on r.movie_id = m.id
+group by 1
+order by 2 desc
+limit 3;
+--- Marvel Studios leads with the highest number of votes received from its movies, trailed by Twentieth Century Fox and Warner Bros.
+
+Q 5.5 Rank actors based on their average ratings in Indian movies released in India.
+
+SELECT n.name as actor_name, ROUND(SUM(r.avg_rating*r.total_votes)/SUM(r.total_votes),2) AS actor_avg_rating
+FROM names n JOIN role_mapping AS a ON n.id=a.name_id
+JOIN movie m ON a.movie_id = m.id
+JOIN ratings r ON m.id=r.movie_id
+WHERE category = 'actor' AND upper(country) like '%INDIA%'
+GROUP BY actor_name 
+order by 2 desc;
+-- The query reveals the top actors based on their average ratings, with 'Gopi Krishna,' 'Shilpa Mahendar,' and 'Priyanka Augustin'
+--  claiming the top three spots, while other notable actors follow suit.
+
+Q 5.6 Identify the top five actresses in Hindi movies released in India based on their average ratings.
+
+select name as actress_name, round(sum(avg_rating*total_votes)/sum(total_votes),2) as actress_avg_rating
+from names n join role_mapping rm on n.id = rm.name_id
+join ratings r on rm.movie_id = r.movie_id
+join movie m on rm.movie_id = m.id
+where lower(category) like '%actress%' and languages like '%hindi%' and upper(country) like '%INDIA%'
+group by 1
+order by actress_avg_rating desc
+limit 5;
+-- Retrieve the top five actresses in Hindi movies released in India, ranked by their average ratings, with Pranati Rai Prakash leading the list.
+
+Segment 6: Broader Understanding of Data
+Q 6.1 Classify thriller movies based on average ratings into different categories.
+
+select Title as Movie_name, case when avg_rating between 8.0 and 10 then 'Excellent'
+                              when avg_rating between 6.0 and 7.9 then 'Good'
+                              when avg_rating between 4.0 and 5.9 then 'Average'
+else 'Poor' end Category from movie m 
+join ratings r on r.movie_id = m.id
+join genre g on m.id = r.movie_id
+where genre = 'Thriller';
+-- Categorize thriller movies based on average ratings into four tiers: Excellent, Good, Average, and Poor.
+
+Q 6.2 analyse the genre-wise running total and moving average of the average movie duration.
+
+select genre, round(avg_duration,2) avg_duration, 
+sum(avg_duration) over (order by avg_duration desc) as running_total,
+round(avg(avg_duration) over (order by avg_duration desc),2) as moving_average from (
+select genre,avg(duration) as avg_duration from  genre g left join 
+movie m on g.movie_id=m.id
+group by genre) subquery ;
+
+-- Analyze genres based on avg_duration, running_total and moving_average revealing Action as the leader in all followed by Romance and crime.
+
+
+Q 6.3 Identify the five highest-grossing movies of each year that belong to the top three genres.
+with top_genre as
+(select genre,count(m.id) as movie_count
+from genre g left join movie m on g.movie_id=m.id
+group by genre 
+order by movie_count desc 
+limit 3)
+select * from (
+select genre,year,m.title as movie_name,
+worlwide_gross_income, 
+rank() over (partition by genre,year order by cast(replace(trim(worlwide_gross_income),"$ " , "")as unsigned)
+desc) as movie_rank 
+from movie m inner join genre g on g.movie_id=m.id 
+where g.genre in (select genre from top_genre)) t
+where movie_rank <=5;
+
+-- The query retrieves the top 5 highest-grossing movies in each year from the top 3 genres by movie count.
+
+Q 6.4 Determine the top two production houses that have produced the highest number of hits among multilingual movies.
+
+select m.production_company,
+count(m.id) as movie_count,
+rank() over(order by count(m.id)desc ) as prod_rank
+from movie m left join ratings r on r.movie_id=m.id
+where production_company is not null and median_rating > 8
+and languages like "%,%"
+group by production_company
+limit 2;
+
+-- The query ranks production companies by movie count for films with a median rating above 8 and multiple languages,
+--- highlighting the top 2: 'Star Cinema' (3 movies) and 'Ave Fenix Pictures' (2 movies).
+
+
+
+Q 6.5 Identify the top three actresses based on the number of Super Hit movies (average rating > 8) in the drama genre.
+
+select name, count(rm.movie_id) count_of_superhit_movies from names n
+join role_mapping rm on n.id = rm.name_id
+join ratings r on r.movie_id = rm.movie_id
+join genre g on g.movie_id = rm.movie_id
+where avg_rating > 8 and category = 'actress' and genre = 'drama'
+group by name
+order by count_of_superhit_movies desc
+limit 3;
+
+--  query retrives Top 3 actresses in high-rated drama films: 'Denise Gough', 'Susan Brown', 'Amanda Lawrence' - 2 superhit movies each.
+
+Q 6.6: Retrieve details for the top nine directors based on the number of movies, including average inter-movie duration, ratings, and more.
+
+select name as Director, count(dm.movie_id) as no_of_movies, 
+avg(avg_rating) as average_rating, sum(duration) total_duration
+from names n join director_mapping dm on dm.name_id = n.id
+join movie m on m.id = dm.movie_id
+join ratings r on r.movie_id = dm.movie_id 
+group by name
+order by no_of_movies desc
+limit 9
+
+-- The query displays directors by movie count, average rating, and total duration, ranked by movie count. The top director is 'Andrew Jones', followed by 'A.L. Vijay', 'Jesse V. Johnson', and others.
+
+Conclussion ---
+-- AS THE PER MY ANALYSIS I CAME ACROSS A.L. VIJAY IS THE TOP DIRECTOR AS PER 
+-- PUBLIC RATING  IF THE BOLLY MOVIES WANTS HITS BY PUBLIC PULSE THEY SHOULD 
+-- AQUIRE KNOWLEDGE ON CONTENT ON  VIJAY MOVIES.Chiris Hemsworth, Robert Downey ,
+--  CHiris evans are the top three directors in top genres with movie count 12 
+--  
+-- #>>COMINING TO PRODUCTION HOUSES Star cinema and Ave Fenix Pictures 
+-- GAVE MORE HITS CAMPARE TO  THE OTHERS AS THEY ARE TOP PRODUCTION HOUSES 
+-- IN MULTILANGAL SO THAT THEY WILL INTERSSTED IN PRODUCING  MORE
+-- BOLLY MOVIES.
+
+-- #>>IF BOLLY MOVIES COME UP WITH ACTION ,DRAMA,
+--  COMEDY GENRE  IT WILL DEFINITELY ENTERTAIN AS THEY 
+--  ARE TOP GENRES PEOPLE ARE MORE INTERESTED IN THESE
+--  GENRES COMPARATIVELY BEFORE 
+
+--  #>> IN HINDI MOVIES TOP ACTRESSES WHO HITS OR
+--  ENTERTAIN PEOPLE BY THEIR PERFORMANCE ARE taapsee pannu , kriti sanon, divya dutta, Sradda Kapoor,
+--   Krithi karbanda. WITH ANY OF THOSE ACTRESSES WILL HIT SOON THE INDUSTRY.
+--   
+--   ##>>> IN INDIAN MOVIES VIJAY SEYHUPAYHI RANKED AS NUMBER ONE 
+--        AND ALSO MOHAN LAL AND MAMMOTTY ARE ALSO TOP ACTORS BASED ON THEIR
+--        MEDIAN RATINGS . WE CAN CONSIDER THESE ACTORS WILL BOX OFFICES IN BOLLY MOVIES
+--        
+-- #####>><<**FINALLY I CAME INTO MY CONCLUSION
+--        COBMINATION OF ABOVE ACTORS AND ACTRESESS AND DIRECTORS AND PRODUCTION HOUSES IN 
+--        TOP GENRES WILL ENTERTAIN MORE
